@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DataRangeFinder — 宇宙誕生〜西暦3000年</title>
+  <meta name="description" content="宇宙誕生（約138億年前）から西暦3000年までの超長スパン年表。Dead Spaceスタイルの3Dホログラム表示と2D年表を切り替えて探索できます。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app" data-mode="3d">
+    <!-- ローディング画面 -->
+    <div id="loading-screen">
+      <div class="loading-content">
+        <div class="loading-logo">DataRangeFinder</div>
+        <div class="loading-text" id="loading-text" role="status">初期化中...</div>
+      </div>
+    </div>
+
+    <!-- 3Dキャンバス -->
+    <canvas id="canvas-3d"></canvas>
+
+    <!-- 2Dキャンバス -->
+    <canvas id="canvas-2d"></canvas>
+
+    <!-- HUD オーバーレイ -->
+    <div id="hud">
+      <!-- モード切り替えボタン -->
+      <div id="mode-toggle">
+        <button id="btn-move" class="mode-btn" title="移動モード">
+          <span class="mode-icon">⇆</span>
+          <span class="mode-label">移動</span>
+        </button>
+        <button id="btn-3d" class="mode-btn active" title="ホログラム年表モード">
+          <span class="mode-icon">◈</span>
+          <span class="mode-label">端末</span>
+        </button>
+        <button id="btn-2d" class="mode-btn" title="2Dモード">
+          <span class="mode-icon">≡</span>
+          <span class="mode-label">年表</span>
+        </button>
+      </div>
+
+      <!-- 期間と画面の左・中央・右の年代 -->
+      <div id="era-indicator" aria-label="年表の期間と年代">
+        <div id="timeline-zoom" role="group" aria-label="年表の期間">
+          <button type="button" id="timeline-zoom-out" aria-label="年表を縮小">−</button>
+          <span id="timeline-period-label">期間</span>
+          <select id="timeline-span" aria-labelledby="timeline-period-label">
+            <option value="current" disabled selected>現在の期間</option>
+            <option value="full">全期間</option>
+            <option value="billion">10億年</option>
+            <option value="million">100万年</option>
+            <option value="ten-thousand">1万年</option>
+            <option value="century">100年</option>
+            <option value="year">1年</option>
+            <option value="month">1か月</option>
+            <option value="week">7日</option>
+            <option value="two-days">2日（48時間）</option>
+          </select>
+          <span id="timeline-span-label" aria-label="期間"></span>
+          <button type="button" id="timeline-zoom-in" aria-label="年表を拡大">＋</button>
+        </div>
+        <div id="era-year">
+          <div class="era-year-point" aria-label="画面左の年代"><span id="era-year-left" class="era-year-value"></span></div>
+          <div class="era-year-point" aria-label="画面中央の年代"><span id="era-year-center" class="era-year-value"></span></div>
+          <div class="era-year-point" aria-label="画面右の年代"><span id="era-year-right" class="era-year-value"></span></div>
+        </div>
+      </div>
+
+      <!-- 検索バー -->
+      <div id="search-bar">
+        <input type="text" id="search-input" placeholder="イベントを検索..." autocomplete="off" />
+        <div id="search-results"></div>
+      </div>
+
+      <!-- カテゴリフィルタ -->
+      <div id="category-filter">
+        <div class="filter-title">カテゴリ</div>
+        <div class="filter-buttons">
+          <button class="filter-btn active" data-cat="all">全て</button>
+          <button class="filter-btn" data-cat="astronomy">🌌 宇宙</button>
+          <button class="filter-btn" data-cat="geology">🌋 地質</button>
+          <button class="filter-btn" data-cat="biology">🦕 生物</button>
+          <button class="filter-btn" data-cat="civilization">🏛️ 文明</button>
+          <button class="filter-btn" data-cat="technology">⚡ 技術</button>
+          <button class="filter-btn" data-cat="japan">⛩️ 日本</button>
+          <button class="filter-btn" data-cat="culture">🎨 文化</button>
+          <button class="filter-btn" data-cat="future">🚀 未来</button>
+        </div>
+      </div>
+
+      <!-- 時代ジャンプボタン -->
+      <div id="era-nav">
+        <div class="era-nav-title">時代を移動</div>
+        <div class="era-nav-list">
+          <button class="era-btn" data-year="-13800000000">🌌 宇宙誕生</button>
+          <button class="era-btn" data-year="-4600000000">🌍 地球誕生</button>
+          <button class="era-btn" data-year="-541000000">🐚 カンブリア</button>
+          <button class="era-btn" data-year="-230000000">🦕 恐竜時代</button>
+          <button class="era-btn" data-year="-66000000">☄️ 恐竜絶滅</button>
+          <button class="era-btn" data-year="-300000">👤 人類誕生</button>
+          <button class="era-btn" data-year="-3500">🏺 古代文明</button>
+          <button class="era-btn" data-year="1">📜 西暦元年</button>
+          <button class="era-btn" data-year="1868">⚔️ 明治維新</button>
+          <button class="era-btn" data-year="2024">💻 現代</button>
+          <button class="era-btn" data-year="2500">🌠 未来</button>
+        </div>
+      </div>
+
+      <!-- イベント件数 -->
+      <div id="event-count"></div>
+    </div>
+
+    <!-- イベント詳細パネル (2D用) -->
+    <div id="detail-panel">
+      <button id="detail-close">✕</button>
+      <div id="detail-category"></div>
+      <div id="detail-year"></div>
+      <div id="detail-title"></div>
+      <div id="detail-desc"></div>
+      <div id="detail-tags"></div>
+    </div>
+
+    <!-- トランジションオーバーレイ -->
+    <div id="transition-overlay"></div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

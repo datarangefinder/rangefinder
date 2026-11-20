@@ -1,0 +1,573 @@
+/* ===========================
+   DataRangeFinder — Global Styles
+   =========================== */
+
+:root {
+  --bg-primary: #020408;
+  --bg-secondary: #05080f;
+  --holo-cyan: #00e5ff;
+  --holo-blue: #1565c0;
+  --holo-glow: rgba(0, 229, 255, 0.4);
+  --text-primary: #e0f7fa;
+  --text-secondary: #80deea;
+  --text-dim: rgba(224, 247, 250, 0.4);
+  --panel-bg: rgba(2, 20, 35, 0.85);
+  --panel-border: rgba(0, 229, 255, 0.3);
+  --panel-glow: 0 0 20px rgba(0, 229, 255, 0.15);
+  --font-ui: 'Orbitron', monospace;
+  --font-jp: 'Noto Sans JP', sans-serif;
+
+  /* カテゴリカラー */
+  --cat-astronomy:    #ffd700;
+  --cat-geology:      #ff6b35;
+  --cat-biology:      #00ff7f;
+  --cat-civilization: #4a9eff;
+  --cat-technology:   #00e5ff;
+  --cat-japan:        #ff6eb4;
+  --cat-culture:      #da70d6;
+  --cat-future:       #7fff00;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-jp);
+  user-select: none;
+}
+
+#app { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+
+/* ===========================
+   ローディング画面
+   =========================== */
+#loading-screen {
+  position: fixed; inset: 0;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+.loading-content { text-align: center; }
+
+.loading-logo {
+  font-family: var(--font-ui);
+  font-size: clamp(1.3rem, 4.8vw, 3.7rem);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+.loading-text {
+  display: none;
+}
+#loading-screen.has-error .loading-text { display: block; margin-top: 1.5rem; color: #fff; font-size: 0.85rem; }
+
+/* ===========================
+   キャンバス
+   =========================== */
+#canvas-3d, #canvas-2d {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+}
+#canvas-3d { z-index: 1; }
+#canvas-2d { z-index: 1; display: none; touch-action: none; }
+
+/* Match the terminal's luminous outer frame without changing the 2D plot. */
+#app[data-mode="2d"]::before,
+#app[data-mode="2d"]::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 1px;
+}
+#app[data-mode="2d"]::before {
+  inset: 8px 8px 80px;
+  border: 1px solid rgba(145, 237, 250, 0.65);
+  box-shadow: 0 0 2px rgba(0, 229, 255, 0.3);
+}
+#app[data-mode="2d"]::after {
+  inset: 13px 13px 85px;
+  border: 3px solid #00bce9;
+  box-shadow:
+    inset 0 0 15px 4px rgba(0, 174, 255, 0.5),
+    0 0 6px rgba(0, 205, 255, 0.55);
+}
+
+/* Readable, screen-sized beacons tied to the physical hologram's time axis. */
+.holo-beacons { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.holo-beacons[hidden], .holo-beacon-picker[hidden] { display: none; }
+.holo-axis-labels { position: absolute; inset: 0; pointer-events: none; }
+.holo-axis-label {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  color: #a1efff;
+  font-family: var(--font-jp);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  text-shadow: 0 1px 3px #00121f, 0 0 4px #00121f;
+}
+.holo-axis-label::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: -10px;
+  width: 1px; height: 7px;
+  background: rgba(120, 235, 255, 0.75);
+}
+.holo-beacon { --beacon-color: #8cf5ff; }
+.holo-beacon-stem {
+  position: absolute; width: 1px;
+  background: linear-gradient(var(--beacon-color), color-mix(in srgb, var(--beacon-color) 28%, transparent));
+  box-shadow: 0 0 6px var(--beacon-color); opacity: 0.65;
+}
+.holo-beacon-button {
+  position: absolute; top: 0; left: 0; height: 60px; padding: 0 4px 18px;
+  border: 0; border-radius: 5px; background: transparent;
+  color: #e3faff; font-family: var(--font-jp); text-align: center;
+  pointer-events: auto; cursor: pointer;
+  text-shadow: 0 1px 5px #000, 0 0 8px #03121e, 0 0 12px #03121e;
+}
+.holo-beacon-title {
+  display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font-size: 14px; font-weight: 600; line-height: 22px;
+}
+.holo-beacon-date { display: block; font-size: 12px; line-height: 20px; color: #b2dce7; }
+.holo-beacon-diamond {
+  position: absolute; top: 50px; width: 14px; height: 14px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border: 1px solid #ddfbff; background: var(--beacon-color);
+  box-shadow: 0 0 7px var(--beacon-color), 0 0 16px color-mix(in srgb, var(--beacon-color) 45%, transparent);
+  opacity: 0.85;
+}
+.holo-beacon.is-selected .holo-beacon-diamond,
+.holo-beacon-button:hover .holo-beacon-diamond,
+.holo-beacon-button:focus-visible .holo-beacon-diamond {
+  opacity: 1; box-shadow: 0 0 0 4px #d9fbff38, 0 0 16px var(--beacon-color);
+}
+.holo-beacon.is-selected .holo-beacon-stem { opacity: 1; width: 2px; }
+.holo-beacon.is-selected .holo-beacon-title { color: #fff; }
+.holo-beacon-button:hover, .holo-beacon-button:focus-visible { background: #042231b8; }
+.holo-beacon-picker {
+  position: absolute; z-index: 5; padding: 10px; overflow-y: auto;
+  border: 1px solid #49bdd4; border-radius: 8px;
+  background: #041621; box-shadow: 0 8px 32px #000b, 0 0 22px #00e5ff20;
+  pointer-events: auto; color: #e3faff; font-size: 14px;
+}
+.holo-beacon-picker-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.holo-beacon-picker button { color: #e3faff; font-family: var(--font-jp); cursor: pointer; }
+.holo-beacon-picker-header button { border: 1px solid #2b6578; border-radius: 4px; background: #082534; padding: 5px 8px; }
+.holo-beacon-event { display: block; width: 100%; padding: 9px; border: 0; border-top: 1px solid #173f50; background: transparent; text-align: left; }
+.holo-beacon-event span { display: block; font-size: 14px; }
+.holo-beacon-event span + span { margin-top: 3px; color: #9ec8d5; font-size: 12px; }
+.holo-beacon-event:hover, .holo-beacon-event:focus-visible { background: #0d3445; }
+
+/* ===========================
+   HUD
+   =========================== */
+#hud {
+  position: fixed; inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+#hud.boot-hidden { opacity: 0; pointer-events: none; }
+#hud > * { pointer-events: auto; }
+
+#timeline-zoom {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+#timeline-zoom button {
+  width: 30px; height: 30px;
+  border: 1px solid var(--panel-border);
+  border-radius: 50%;
+  background: rgba(0,229,255,0.07);
+  color: var(--holo-cyan);
+  font-size: 18px;
+  cursor: pointer;
+}
+#timeline-zoom button:disabled { opacity: 0.3; cursor: default; }
+#timeline-span {
+  flex: 1;
+  min-width: 0;
+  padding: 5px;
+  border: 0;
+  background: #051723;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+#timeline-span-label {
+  flex: 1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+#app[data-mode="2d"] #timeline-span-label { display: none; }
+#app[data-mode="3d"] #timeline-span,
+#app[data-mode="move"] #timeline-span,
+#app[data-mode="3d"] #timeline-zoom button,
+#app[data-mode="move"] #timeline-zoom button { display: none; }
+
+/* モード切り替え */
+#mode-toggle {
+  position: absolute;
+  top: 20px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 4px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 50px;
+  padding: 4px;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--panel-glow);
+}
+.mode-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 20px;
+  background: transparent;
+  border: none; border-radius: 50px;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.mode-btn:hover { color: var(--holo-cyan); }
+.mode-btn.active {
+  background: rgba(0, 229, 255, 0.15);
+  color: var(--holo-cyan);
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.2);
+}
+.mode-icon { font-size: 1rem; }
+
+/* 時代インジケーター */
+#era-indicator {
+  position: absolute;
+  top: 20px; left: 20px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  width: 324px;
+  max-width: calc(100vw - 40px);
+  padding: 8px;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--panel-glow);
+}
+#era-year {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-jp);
+}
+.era-year-point {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 4px;
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  border-radius: 4px;
+  background: rgba(0, 229, 255, 0.035);
+  text-align: center;
+}
+.era-year-value {
+  display: block;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+#era-year-center { color: var(--text-primary); }
+#app[data-mode="move"] #era-year { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr); }
+
+/* 検索バー */
+#search-bar {
+  position: absolute;
+  top: 20px; right: 20px;
+  width: 280px;
+}
+#search-input {
+  width: 100%;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: var(--text-primary);
+  font-family: var(--font-jp);
+  font-size: 0.85rem;
+  backdrop-filter: blur(12px);
+  outline: none;
+  transition: border-color 0.3s;
+}
+#search-input:focus { border-color: var(--holo-cyan); box-shadow: 0 0 10px rgba(0,229,255,0.2); }
+#search-input::placeholder { color: var(--text-dim); }
+
+#search-results {
+  margin-top: 4px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  display: none;
+}
+#search-results.visible { display: block; }
+.search-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(0,229,255,0.08);
+  transition: background 0.2s;
+}
+.search-item:hover { background: rgba(0,229,255,0.08); }
+.search-item:last-child { border-bottom: none; }
+.search-item-title { font-size: 0.85rem; color: var(--text-primary); margin-bottom: 2px; }
+.search-item-year  { font-size: 0.7rem; color: var(--text-dim); }
+
+/* カテゴリフィルタ */
+#category-filter {
+  position: absolute;
+  bottom: 80px; left: 20px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--panel-glow);
+}
+.filter-title {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  margin-bottom: 8px;
+  font-family: var(--font-ui);
+}
+.filter-buttons { display: flex; flex-direction: column; gap: 4px; }
+.filter-btn {
+  background: transparent;
+  border: 1px solid rgba(0,229,255,0.15);
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-jp);
+  font-size: 0.72rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+.filter-btn:hover { border-color: var(--holo-cyan); color: var(--holo-cyan); }
+.filter-btn.active {
+  background: rgba(0,229,255,0.1);
+  border-color: var(--holo-cyan);
+  color: var(--holo-cyan);
+}
+
+/* 時代ナビ */
+#era-nav {
+  position: absolute;
+  bottom: 80px; right: 20px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--panel-glow);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+#era-nav::-webkit-scrollbar { width: 3px; }
+#era-nav::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
+.era-nav-title {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  margin-bottom: 8px;
+  font-family: var(--font-ui);
+}
+.era-nav-list { display: flex; flex-direction: column; gap: 4px; }
+.era-btn {
+  background: transparent;
+  border: 1px solid rgba(0,229,255,0.1);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-jp);
+  font-size: 0.72rem;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.era-btn:hover { border-color: var(--holo-cyan); color: var(--holo-cyan); background: rgba(0,229,255,0.05); }
+
+/* イベント件数 */
+#event-count {
+  position: absolute;
+  bottom: 20px; right: 20px;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  font-family: var(--font-ui);
+  letter-spacing: 0.1em;
+}
+#event-count { pointer-events: none; }
+
+/* 3Dでは、HUDは投影年表を邪魔しない補助装置として後景に退く */
+#app[data-mode="3d"] #mode-toggle {
+  top: 12px;
+  background: rgba(2, 14, 25, 0.56);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.12);
+}
+#app[data-mode="3d"] #era-indicator,
+#app[data-mode="3d"] #search-bar {
+  top: 14px;
+  opacity: 0.78;
+}
+#app[data-mode="3d"] #category-filter {
+  opacity: 0.24;
+  transform: scale(0.78);
+  transform-origin: bottom left;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+#app[data-mode="3d"] #category-filter:hover,
+#app[data-mode="3d"] #category-filter:focus-within {
+  opacity: 0.96;
+  transform: scale(0.9);
+}
+#app[data-mode="3d"] #era-nav {
+  opacity: 0.2;
+  transform: scale(0.72);
+  transform-origin: bottom right;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+#app[data-mode="3d"] #era-nav:hover,
+#app[data-mode="3d"] #era-nav:focus-within {
+  opacity: 0.96;
+  transform: scale(0.9);
+}
+#app[data-mode="3d"] #event-count {
+  opacity: 0.46;
+}
+
+/* ===========================
+   詳細パネル (2Dモード用)
+   =========================== */
+#detail-panel {
+  position: fixed;
+  top: 0; right: -400px;
+  width: 380px; height: 100%;
+  background: rgba(2, 15, 28, 0.95);
+  border-left: 1px solid var(--panel-border);
+  backdrop-filter: blur(20px);
+  z-index: 20;
+  padding: 60px 28px 28px;
+  transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+}
+#detail-panel.open { right: 0; }
+#detail-panel::-webkit-scrollbar { width: 3px; }
+#detail-panel::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
+
+#detail-close {
+  position: absolute;
+  top: 20px; right: 20px;
+  width: 36px; height: 36px;
+  background: rgba(0,229,255,0.1);
+  border: 1px solid var(--panel-border);
+  border-radius: 50%;
+  color: var(--holo-cyan);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+#detail-close:hover { background: rgba(0,229,255,0.2); }
+
+#detail-category {
+  font-size: 0.65rem;
+  font-family: var(--font-ui);
+  letter-spacing: 0.2em;
+  margin-bottom: 8px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  display: inline-block;
+}
+#detail-year {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--holo-cyan);
+  margin-bottom: 12px;
+  letter-spacing: 0.05em;
+}
+#detail-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+#detail-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+#detail-tags {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.detail-tag {
+  font-size: 0.65rem;
+  padding: 3px 10px;
+  background: rgba(0,229,255,0.08);
+  border: 1px solid rgba(0,229,255,0.2);
+  border-radius: 50px;
+  color: var(--text-dim);
+}
+
+/* ===========================
+   トランジションオーバーレイ
+   =========================== */
+#transition-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg-primary);
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+#transition-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ===========================
+   カテゴリ色ユーティリティ
+   =========================== */
+.cat-astronomy    { color: var(--cat-astronomy); }
+.cat-geology      { color: var(--cat-geology); }
+.cat-biology      { color: var(--cat-biology); }
+.cat-civilization { color: var(--cat-civilization); }
+.cat-technology   { color: var(--cat-technology); }
+.cat-japan        { color: var(--cat-japan); }
+.cat-culture      { color: var(--cat-culture); }
+.cat-future       { color: var(--cat-future); }
+
+.bg-cat-astronomy    { background: rgba(255,215,0,0.15);    border-color: var(--cat-astronomy); }
+.bg-cat-geology      { background: rgba(255,107,53,0.15);   border-color: var(--cat-geology); }
+.bg-cat-biology      { background: rgba(0,255,127,0.15);    border-color: var(--cat-biology); }
+.bg-cat-civilization { background: rgba(74,158,255,0.15);   border-color: var(--cat-civilization); }
+.bg-cat-technology   { background: rgba(0,229,255,0.15);    border-color: var(--cat-technology); }
+.bg-cat-japan        { background: rgba(255,110,180,0.15);  border-color: var(--cat-japan); }
+.bg-cat-culture      { background: rgba(218,112,214,0.15);  border-color: var(--cat-culture); }
+.bg-cat-future       { background: rgba(127,255,0,0.15);    border-color: var(--cat-future); }
+
+/* スクロールバー全体 */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 4px; }
