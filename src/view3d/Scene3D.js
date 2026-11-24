@@ -984,9 +984,6 @@ export class Scene3D {
     ctx.moveTo(dividerX, 60);
     ctx.lineTo(dividerX, H - 55);
     ctx.stroke();
-    ctx.fillStyle = '#70efff';
-    ctx.font = 'bold 17px Orbitron, monospace';
-    ctx.fillText('DataRangeFinder', statusLeft, 96, statusWidth);
     ctx.font = '15px Orbitron, monospace';
     ctx.fillStyle = 'rgba(189, 247, 255, 0.8)';
     ctx.fillText('時代', statusLeft, 145);
